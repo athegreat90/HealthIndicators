@@ -1,0 +1,85 @@
+name: Prepare validated draft release
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Existing tag: 26.2-v<mod_version> or 26.3-v<mod_version>'
+        required: true
+        type: string
+      runtime_validated:
+        description: 'I verified this exact tagged build in-game on both backends and required transparency modes'
+        required: true
+        default: false
+        type: boolean
+      runtime_evidence:
+        description: 'HTTPS URL to logs, active-backend evidence and completed gameplay checklist for this tag'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    if: inputs.runtime_validated
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          fetch-depth: 0
+      - name: Validate and select existing release tag
+        env:
+          RELEASE_TAG: ${{ inputs.tag }}
+          RUNTIME_EVIDENCE: ${{ inputs.runtime_evidence }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$RELEASE_TAG" =~ ^26\.[23]-v[0-9A-Za-z._+-]+$ ]]
+          [[ "$RUNTIME_EVIDENCE" == https://* ]]
+          git rev-parse --verify "refs/tags/$RELEASE_TAG^{commit}"
+          git checkout --detach "refs/tags/$RELEASE_TAG"
+          mc=$(sed -n 's/^minecraft_version[[:space:]]*=[[:space:]]*//p' gradle.properties)
+          version=$(sed -n 's/^mod_version[[:space:]]*=[[:space:]]*//p' gradle.properties)
+          [[ "$RELEASE_TAG" == "$mc-v$version" ]]
+          git merge-base --is-ancestor HEAD "origin/$mc"
+          echo "MC_VERSION=$mc" >> "$GITHUB_ENV"
+          echo "MOD_VERSION=$version" >> "$GITHUB_ENV"
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
+        with:
+          distribution: temurin
+          java-version: '25'
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.12'
+      - uses: gradle/actions/setup-gradle@4c125117fe7c5aed11272ec4213f602f012f89f2 # v5
+      - name: Run tests and build the tagged source
+        run: |
+          python scripts/run_logic_tests.py
+          python -m unittest discover -s scripts/tests -v
+          bash ./gradlew :common:test :neoforge:build --no-daemon --stacktrace
+      - name: Inspect artifact and create checksum
+        run: python scripts/verify_artifact.py --minecraft "$MC_VERSION" "neoforge/build/libs/HealthIndicators-NeoForge-$MC_VERSION-$MOD_VERSION.jar"
+      - name: Create a draft release for review
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.tag }}
+          RUNTIME_EVIDENCE: ${{ inputs.runtime_evidence }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import os, pathlib
+          properties = dict(line.split('=', 1) for line in pathlib.Path('gradle.properties').read_text().splitlines() if '=' in line and not line.startswith('#'))
+          properties = {key.strip(): value.strip() for key, value in properties.items()}
+          lines = ['Independent compatibility fork of AdyTech99/HealthIndicators (LGPL-3.0).', '',
+                   'Client-only; Java 25 required. Do not install alongside the original mod.', '']
+          for name in ('minecraft_version', 'neoforge_version', 'architectury_api_version', 'yacl_neoforge'):
+              lines.append(f'- {name}: {properties[name]}')
+          lines += ['', 'Runtime validation supplied by the maintainer: ' + os.environ['RUNTIME_EVIDENCE'],
+                    'Required: OpenGL and native Vulkan; 26.3 also Improved Transparency OFF and ON.',
+                    'Compilation and packaging checks are not graphics runtime tests.', '', pathlib.Path('CHANGELOG.md').read_text()]
+          pathlib.Path('build/release-notes.md').write_text('\n'.join(lines), encoding='utf-8')
+          PY
+          gh release create "$RELEASE_TAG" --verify-tag --draft --title "Health Indicators $RELEASE_TAG" --notes-file build/release-notes.md \
+            "neoforge/build/libs/HealthIndicators-NeoForge-$MC_VERSION-$MOD_VERSION.jar" \
+            "neoforge/build/libs/HealthIndicators-NeoForge-$MC_VERSION-$MOD_VERSION.jar.sha256"
