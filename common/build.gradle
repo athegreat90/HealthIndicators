@@ -20,10 +20,9 @@ dependencies {
 
     // Architectury API. This is optional, and you can comment it out if you don't need it.
     implementation("dev.architectury:architectury:$rootProject.architectury_api_version")
-    implementation("dev.isxander:yet-another-config-lib:${project.yacl_fabric}")
-    implementation("maven.modrinth:yacl:${project.yacl_fabric}")
+    // Common code uses YACL's Java API; do not resolve the old Fabric runtime.
+    compileOnly("dev.isxander:yet-another-config-lib:${project.yacl_neoforge}")
     annotationProcessor 'org.spongepowered:mixin:0.8.5:processor'
-    api("com.terraformersmc:modmenu:${project.modmenu}")
 }
 
 loom {

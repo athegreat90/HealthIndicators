@@ -10,5 +10,9 @@ pluginManagement {
 rootProject.name = 'healthindicators'
 
 include 'common'
-include 'fabric'
 include 'neoforge'
+
+// Fabric source is retained, but these branches target NeoForge only.
+if (providers.gradleProperty('includeFabric').orElse('false').get().toBoolean()) {
+    include 'fabric'
+}

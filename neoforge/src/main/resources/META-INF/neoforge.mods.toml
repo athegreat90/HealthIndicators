@@ -1,13 +1,14 @@
 modLoader = "javafml"
 loaderVersion = "[2,)"
 #issueTrackerURL = ""
-license = "LGPL v3"
+license = "LGPL-3.0-only"
 
 [[mods]]
 modId = "healthindicators"
 version = "${version}"
 displayName = "Health Indicators"
 authors = "AdyTech99"
+credits = "Original author: AdyTech99. Independent compatibility fork maintained by athegreat90."
 description = '''
 Simple damage indicator mod that shows a floating health bar (or number) above Players and Mobs.
 '''
@@ -16,23 +17,30 @@ logoFile = "assets/healthindicators/icon.png"
 [[dependencies.healthindicators]]
 modId = "neoforge"
 type = "required"
-versionRange = "[21.11,)"
+versionRange = "${neoForgeVersionRange}"
 ordering = "NONE"
-side = "BOTH"
+side = "CLIENT"
 
 [[dependencies.healthindicators]]
 modId = "minecraft"
 type = "required"
-versionRange = "[26.1,)"
+versionRange = "${minecraftVersionRange}"
 ordering = "NONE"
-side = "BOTH"
+side = "CLIENT"
 
 [[dependencies.healthindicators]]
 modId = "architectury"
 type = "required"
-versionRange = "[20.0.4,)"
+versionRange = "[${architecturyVersion},)"
 ordering = "AFTER"
-side = "BOTH"
+side = "CLIENT"
+
+[[dependencies.healthindicators]]
+modId = "yet_another_config_lib_v3"
+type = "required"
+versionRange = "[${yaclVersion},)"
+ordering = "AFTER"
+side = "CLIENT"
 
 [[mixins]]
  config = "healthindicators.mixins.json"
