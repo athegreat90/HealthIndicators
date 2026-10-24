@@ -17,7 +17,7 @@ import net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent;
 import net.neoforged.neoforge.client.gui.IConfigScreenFactory;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.common.util.Lazy;
-import org.lwjgl.glfw.GLFW;
+import com.mojang.blaze3d.platform.InputConstants;
 
 import static io.github.adytech99.healthindicators.HealthIndicatorsCommon.HEALTH_INDICATORS_CATEGORY;
 
@@ -28,36 +28,36 @@ public final class HealthIndicatorsNeoForge {
 
     public static final Lazy<KeyMapping> HEARTS_RENDERING_ENABLED = Lazy.of(() -> new KeyMapping(
             "key." + HealthIndicatorsCommon.MOD_ID + ".renderingEnabled",
-            GLFW.GLFW_KEY_LEFT,
+            InputConstants.KEY_LEFT,
             HEALTH_INDICATORS_CATEGORY
     ));
 
     public static final Lazy<KeyMapping> ARMOR_RENDERING_ENABLED = Lazy.of(() -> new KeyMapping(
             "key." + HealthIndicatorsCommon.MOD_ID + ".armorRenderingEnabled",
-            GLFW.GLFW_KEY_RIGHT_SHIFT,
+            InputConstants.KEY_RSHIFT,
             HEALTH_INDICATORS_CATEGORY
     ));
 
     public static final Lazy<KeyMapping> OVERRIDE_ALL_FILTERS = Lazy.of(() -> new KeyMapping(
             "key." + HealthIndicatorsCommon.MOD_ID + ".overrideAllFilters",
-            GLFW.GLFW_KEY_RIGHT,
+            InputConstants.KEY_RIGHT,
             HEALTH_INDICATORS_CATEGORY
     ));
     public static final Lazy<KeyMapping> INCREASE_HEART_OFFSET = Lazy.of(() -> new KeyMapping(
             "key." + HealthIndicatorsCommon.MOD_ID + ".increaseHeartOffset",
-            GLFW.GLFW_KEY_UP,
+            InputConstants.KEY_UP,
             HEALTH_INDICATORS_CATEGORY
     ));
 
     public static final Lazy<KeyMapping> DECREASE_HEART_OFFSET = Lazy.of(() -> new KeyMapping(
             "key." + HealthIndicatorsCommon.MOD_ID + ".decreaseHeartOffset",
-            GLFW.GLFW_KEY_DOWN,
+            InputConstants.KEY_DOWN,
             HEALTH_INDICATORS_CATEGORY
     ));
 
     public static final Lazy<KeyMapping> OPEN_CONFIG_SCREEN = Lazy.of(() -> new KeyMapping(
             "key." + HealthIndicatorsCommon.MOD_ID + ".openModMenuConfig",
-            GLFW.GLFW_KEY_I,
+            InputConstants.KEY_I,
             HEALTH_INDICATORS_CATEGORY
     ));
 

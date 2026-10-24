@@ -133,7 +133,7 @@ public abstract class EntityRendererMixin<T extends LivingEntity, S extends Livi
                         matrixStack.translate(0.0D, 9.0F * 1.15F * scale, 0.0D);
                     }
                 }
-                matrixStack.mulPose(this.entityRenderDispatcher.camera.rotation());
+                matrixStack.rotate(this.entityRenderDispatcher.camera.rotation());
                 matrixStack.scale(-scale, scale, scale);
                 matrixStack.translate(0, ModConfig.HANDLER.instance().display_offset, 0);
                 float x = maxX - (heart % heartsPerRow) * 8;
@@ -219,7 +219,7 @@ public abstract class EntityRendererMixin<T extends LivingEntity, S extends Livi
                 matrixStack.translate(0.0D, 9.0F * 1.15F * scale, 0.0D);
             }
         }
-        matrixStack.mulPose(this.entityRenderDispatcher.camera.rotation());
+        matrixStack.rotate(this.entityRenderDispatcher.camera.rotation());
         matrixStack.scale(scale, -scale, scale);
         matrixStack.translate(0, -ModConfig.HANDLER.instance().display_offset, 0);
         Font textRenderer = Minecraft.getInstance().font;
@@ -286,7 +286,7 @@ public abstract class EntityRendererMixin<T extends LivingEntity, S extends Livi
                         matrixStack.translate(0.0D, 9.0F * 1.15F * scale, 0.0D);
                     }
                 }
-                matrixStack.mulPose(this.entityRenderDispatcher.camera.rotation());
+                matrixStack.rotate(this.entityRenderDispatcher.camera.rotation());
                 matrixStack.scale(-scale, scale, scale);
                 matrixStack.translate(0, ModConfig.HANDLER.instance().display_offset, 0);
                 float x = maxX - (pointCount % pointsPerRow) * 8;

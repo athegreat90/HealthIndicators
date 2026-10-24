@@ -1,5 +1,16 @@
 # Porting notes
 
+## Applied on branch 26.3
+
+Derived from the partial 26.2 port, rather than a validated build, because Maven
+access remains blocked. This branch pins Minecraft 26.3, NeoForge 26.3.0.97,
+Architectury 22.0.5 and YACL 3.9.7+26.3-neoforge. Its three camera rotations use
+`PoseStack.rotate`; the six key defaults use `InputConstants.KEY_*` rather than
+GLFW codes. The shared logic suite passed 22/22 tests and packaging-verifier
+fixtures passed 13/13 after the branch changes. These tests do not compile the
+Minecraft-dependent entrypoint or renderer. The full Gradle invocation failed
+during plugin resolution before compilation. No production JAR was generated.
+
 Status: **partial implementation; not a validated release**. The baseline is
 `0656b5d3e598d0693ae355615c8f38bf8b45eb02` (`Feat: update to 26.1`), matching
 the fork's remote `main` and upstream HEAD when inspected. `main` preserves
