@@ -1,6 +1,7 @@
 package io.github.adytech99.healthindicators;
 
 import io.github.adytech99.healthindicators.config.ModConfig;
+import io.github.adytech99.healthindicators.util.IndicatorMath;
 import java.awt.*;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.util.Mth;
@@ -9,7 +10,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
 
 public class DamageDirectionIndicatorRenderer {
-    private static Player player = HealthIndicatorsCommon.client.player;
+    private static Player player;
     private static int timeSinceLastDamage = Integer.MAX_VALUE;
     private static LivingEntity attacker;
 
@@ -18,19 +19,37 @@ public class DamageDirectionIndicatorRenderer {
         attacker = livingEntity;
     }
 
+    public static void clear() {
+        player = null;
+        attacker = null;
+        timeSinceLastDamage = Integer.MAX_VALUE;
+    }
+
     public static void tick(){
         player = HealthIndicatorsCommon.client.player;
+        if (player == null || HealthIndicatorsCommon.client.level == null) {
+            clear();
+            return;
+        }
         if(timeSinceLastDamage != Integer.MAX_VALUE) timeSinceLastDamage++;
-        if (attacker == null || attacker.isDeadOrDying() || attacker.isRemoved()){
-            timeSinceLastDamage = Integer.MAX_VALUE;
-            attacker = null;
+        if (attacker == null || attacker.isDeadOrDying() || attacker.isRemoved()
+                || attacker.level() != HealthIndicatorsCommon.client.level || damageAlpha() == 0){
+            clear();
         }
         if(timeSinceLastDamage == Integer.MAX_VALUE) attacker = null;
     }
 
+    private static int damageAlpha() {
+        return IndicatorMath.damageAlpha(timeSinceLastDamage,
+                ModConfig.HANDLER.instance().damage_direction_indicators_visibility_time,
+                ModConfig.HANDLER.instance().damage_direction_indicators_fade_out_time,
+                ModConfig.HANDLER.instance().damage_direction_indicators_fade_out);
+    }
+
     public static void render(GuiGraphicsExtractor drawContext, float tickDelta) {
         if (player == null) return;
-        if (timeSinceLastDamage <= ModConfig.HANDLER.instance().damage_direction_indicators_visibility_time * 20 && attacker != null) {
+        int alpha = damageAlpha();
+        if (alpha > 0 && attacker != null) {
             // Get positions and calculate direction
             Vec3 playerPos = player.position();
             Vec3 attackerPos = attacker.position();
@@ -46,16 +65,6 @@ public class DamageDirectionIndicatorRenderer {
             int centerX = drawContext.guiWidth() / 2;
             int centerY = drawContext.guiHeight() / 2;
             float angle = (float) Math.toRadians(deltaYaw);
-
-            // Calculate fade-out alpha (0-255)
-            int alpha = 255;
-            if (ModConfig.HANDLER.instance().damage_direction_indicators_fade_out) {
-                int fadeDelay = (ModConfig.HANDLER.instance().damage_direction_indicators_visibility_time - ModConfig.HANDLER.instance().damage_direction_indicators_fade_out_time) * 20;
-                if (timeSinceLastDamage >= fadeDelay) {
-                    float progress = Math.min((timeSinceLastDamage - fadeDelay) / (float) (ModConfig.HANDLER.instance().damage_direction_indicators_fade_out_time * 20), 1.0f);
-                    alpha = 255 - (int) (255 * progress);
-                }
-            }
 
             float scale = ModConfig.HANDLER.instance().damage_direction_indicators_scale;
             Color color = ModConfig.HANDLER.instance().damage_direction_indicators_color;

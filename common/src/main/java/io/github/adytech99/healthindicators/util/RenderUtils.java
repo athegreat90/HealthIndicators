@@ -21,6 +21,11 @@ public class RenderUtils {
     }
     
     public static void drawHeart(Matrix4f model, VertexConsumer vertexConsumer, float x, HeartTypeEnum type, LivingEntity livingEntity, float opacity, double squaredDistance, boolean isObstructed) {
+        drawHeart(model, vertexConsumer, x, type, opacity, squaredDistance, isObstructed);
+    }
+
+    public static void drawHeart(Matrix4f model, VertexConsumer vertexConsumer, float x, HeartTypeEnum type,
+                                 float opacity, double squaredDistance, boolean isObstructed) {
         float minU = 0F;
         float maxU = 1F;
         float minV = 0F;
@@ -79,29 +84,8 @@ public class RenderUtils {
     }
 
     public static String getHealthText(LivingEntity livingEntity) {
-        int decimalPlaces = ModConfig.HANDLER.instance().decimal_places;
-        float health = livingEntity.getHealth();
-        float maxHealth = livingEntity.getMaxHealth();
-        float absorption = livingEntity.getAbsorptionAmount();
-
-        String healthStr = formatToDecimalPlaces(health + absorption, decimalPlaces);
-        String maxHealthStr = formatToDecimalPlaces(maxHealth, decimalPlaces);
-
-        if (ModConfig.HANDLER.instance().percentage_based_health) {
-            float percentage = ((health + absorption) / maxHealth) * 100;
-            String percentageStr = formatToDecimalPlaces(percentage, decimalPlaces);
-            return percentageStr + " %";
-        } else {
-            return healthStr + " / " + maxHealthStr;
-        }
-    }
-
-    private static String formatToDecimalPlaces(float value, int decimalPlaces) {
-        if (decimalPlaces == 0) {
-            return String.format("%.0f", value);
-        } else {
-            String decimalPlaces2 = String.valueOf(decimalPlaces);
-            return String.format("%." + decimalPlaces2 + "f", value);
-        }
+        return IndicatorMath.formatHealth(livingEntity.getHealth(), livingEntity.getAbsorptionAmount(),
+                livingEntity.getMaxHealth(), ModConfig.HANDLER.instance().decimal_places,
+                ModConfig.HANDLER.instance().percentage_based_health);
     }
 }

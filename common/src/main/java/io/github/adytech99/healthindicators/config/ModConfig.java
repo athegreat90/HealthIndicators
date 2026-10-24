@@ -16,7 +16,6 @@ import org.jetbrains.annotations.Nullable;
 import java.awt.*;
 import java.nio.file.Path;
 import java.util.List;
-import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
@@ -32,11 +31,11 @@ public class ModConfig {
 
     @Label
     @AutoGen(category = "filters")
-    private final Component filtersProTip = Component.literal("Pro Tip: You can temporarily override the below criteria and force health display for all living entities by holding the Right-Arrow key (customizable)").withStyle(ChatFormatting.GOLD);
+    private final Component filtersProTip = Component.literal("Pro Tip: You can temporarily override the below criteria and force health display for all living entities by holding the Right-Arrow key (customizable)").withStyle(style -> style.withColor(0xFFAA00));
 
     @Label
     //@AutoGen(category = "filters", group = "entity_type")
-    private final Component filtersTypeLabel = Component.literal("Enable health display based on entity type").withStyle(ChatFormatting.BOLD, ChatFormatting.AQUA);
+    private final Component filtersTypeLabel = Component.literal("Enable health display based on entity type").withStyle(style -> style.withBold(true).withColor(0x55FFFF));
 
     @SerialEntry
     @AutoGen(category = "filters", group = "entity_type")
@@ -76,7 +75,7 @@ public class ModConfig {
 
     @Label
     @AutoGen(category = "filters", group = "advanced")
-    private final Component filtersAdvancedLabel = Component.literal("Show for...").withStyle(ChatFormatting.AQUA);
+    private final Component filtersAdvancedLabel = Component.literal("Show for...").withStyle(style -> style.withColor(0x55FFFF));
 
     /*@Label
     @AutoGen(category = "filters", group = "advanced")
@@ -96,7 +95,7 @@ public class ModConfig {
     @Label
     @AutoGen(category = "filters", group = "advanced")
     //private final Text damaged_only_label = Text.literal("Settings for the 'damaged entity' criteria:").formatted(Formatting.ITALIC);
-    private final Component damaged_only_label = Component.literal(" ").withStyle(ChatFormatting.ITALIC);
+    private final Component damaged_only_label = Component.literal(" ").withStyle(style -> style.withItalic(true));
 
     @SerialEntry
     @AutoGen(category = "filters", group = "advanced")
@@ -111,7 +110,7 @@ public class ModConfig {
     @Label
     @AutoGen(category = "filters", group = "advanced")
     //private final Text on_crosshair_label = Text.literal("Settings for the 'looking at entity' criteria:").formatted(Formatting.ITALIC);
-    private final Component looking_at_label = Component.literal(" ").withStyle(ChatFormatting.ITALIC);
+    private final Component looking_at_label = Component.literal(" ").withStyle(style -> style.withItalic(true));
 
     @SerialEntry
     @AutoGen(category = "filters", group = "advanced")
@@ -125,7 +124,7 @@ public class ModConfig {
 
     @Label
     @AutoGen(category = "filters", group = "advanced")
-    private final Component distance_label = Component.literal(" ").withStyle(ChatFormatting.ITALIC);
+    private final Component distance_label = Component.literal(" ").withStyle(style -> style.withItalic(true));
 
     @SerialEntry
     @AutoGen(category = "filters", group = "advanced")
@@ -140,7 +139,7 @@ public class ModConfig {
 
     @Label
     @AutoGen(category = "filters", group = "advanced")
-    private final Component override_players_label = Component.literal("Overrides").withStyle(ChatFormatting.ITALIC);
+    private final Component override_players_label = Component.literal("Overrides").withStyle(style -> style.withItalic(true));
 
     @SerialEntry
     @AutoGen(category = "filters", group = "advanced")
@@ -204,14 +203,14 @@ public class ModConfig {
     @IntSlider(min = 0, max = 12, step = 1)
     public int decimal_places = 1;
 
-    /*@SerialEntry
+    @SerialEntry
     @AutoGen(category = "appearance", group = "indicator_type")
-    @MasterTickBox(value = {"number_display_background_color"})*/
+    @MasterTickBox(value = {"number_display_background_color"})
     public boolean render_number_display_background_color = false;
 
-    /*@SerialEntry
+    @SerialEntry
     @AutoGen(category = "appearance", group = "indicator_type")
-    @ColorField*/
+    @ColorField
     public Color number_display_background_color = Color.BLACK;
 
     @AutoGen(category = "appearance", group = "indicator_type")
@@ -265,7 +264,7 @@ public class ModConfig {
 
     @Label
     @AutoGen(category = "messages", group = "commands")
-    private final Component commandsRestartWarning = Component.literal("For this section, a restart is required to apply any modifications").withStyle(ChatFormatting.RED);
+    private final Component commandsRestartWarning = Component.literal("For this section, a restart is required to apply any modifications").withStyle(style -> style.withColor(0xFF5555));
 
     @SerialEntry
     @AutoGen(category = "messages", group = "commands")
@@ -311,7 +310,30 @@ public class ModConfig {
     public int damage_direction_indicators_fade_out_time = 3;
 
 
+    /** JSON may bypass the GUI's constraints. Repair invalid values in memory without deleting the file. */
+    public void validate() {
+        icons_per_row = io.github.adytech99.healthindicators.util.IndicatorMath.iconsPerRow(icons_per_row);
+        decimal_places = io.github.adytech99.healthindicators.util.IndicatorMath.decimalPlaces(decimal_places);
+        health_bar_opacity = Math.clamp(health_bar_opacity, 0, 100);
+        if (indicator_type == null) indicator_type = HealthDisplayTypeEnum.HEARTS;
+        if (message_type == null) message_type = MessageTypeEnum.ACTIONBAR;
+        if (number_color == null) number_color = Color.RED;
+        if (number_display_background_color == null) number_display_background_color = Color.BLACK;
+        if (damage_direction_indicators_color == null) damage_direction_indicators_color = Color.RED;
+        if (list == null) list = Lists.newArrayList("minecraft:armor_stand");
+        else list.removeIf(java.util.Objects::isNull);
+        if (!Float.isFinite(size) || size < 0) size = 0.025f;
+        if (!Double.isFinite(display_offset)) display_offset = 0;
+        if (!Double.isFinite(offset_step_size) || offset_step_size < 0) offset_step_size = 1;
+        if (max_health <= 0) max_health = 20;
+        time_after_hit = Math.clamp(time_after_hit, 0, Integer.MAX_VALUE / 20);
+        damage_direction_indicators_visibility_time = Math.max(0, damage_direction_indicators_visibility_time);
+        damage_direction_indicators_fade_out_time = Math.max(0, damage_direction_indicators_fade_out_time);
+        damage_direction_indicators_scale = Math.max(0, damage_direction_indicators_scale);
+    }
+
     public static Screen createScreen(@Nullable Screen parent) {
+        HANDLER.instance().validate();
         return HANDLER.generateGui().generateScreen(parent);
     }
     public Screen createConfigScreen(Screen parent) {

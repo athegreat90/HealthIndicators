@@ -8,7 +8,7 @@ import io.github.adytech99.healthindicators.config.ModConfig;
 
 public class ConfigUtils {
     public static void sendMessage(LocalPlayer player, Component text) {
-        if (isSendMessage()) {
+        if (player != null && isSendMessage()) {
             boolean overlay = ModConfig.HANDLER.instance().message_type == MessageTypeEnum.ACTIONBAR;
             if (overlay)
                 player.sendOverlayMessage(text);
@@ -18,7 +18,7 @@ public class ConfigUtils {
     }
 
     public static void sendMessage(ServerPlayer player, Component text) {
-        if (isSendMessage()) {
+        if (player != null && isSendMessage()) {
             boolean overlay = ModConfig.HANDLER.instance().message_type == MessageTypeEnum.ACTIONBAR;
             if (overlay)
                 player.sendOverlayMessage(text);
@@ -28,7 +28,7 @@ public class ConfigUtils {
     }
 
     public static void sendOverlayMessage(LocalPlayer player, Component text) {
-        if (isSendMessage()) {
+        if (player != null && isSendMessage()) {
             player.sendOverlayMessage(text);
         }
     }

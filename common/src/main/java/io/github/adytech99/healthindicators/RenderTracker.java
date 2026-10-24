@@ -2,12 +2,12 @@ package io.github.adytech99.healthindicators;
 
 import io.github.adytech99.healthindicators.config.Config;
 import io.github.adytech99.healthindicators.config.ModConfig;
+import io.github.adytech99.healthindicators.util.EntityFilters;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.player.LocalPlayer;
-import net.minecraft.network.chat.Component;
 import net.minecraft.util.Mth;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.AgeableMob;
@@ -37,28 +37,41 @@ public class RenderTracker {
         RenderTracker.trackedEntity = trackedEntity;
     }
 
+    public static void clear() {
+        UUIDS.clear();
+        trackedEntity = null;
+        after_attack = ModConfig.HANDLER.instance().after_attack;
+    }
 
     public static void tick(Minecraft client){
-        if(client.player == null || client.level == null) return;
+        if(client.player == null || client.level == null) {
+            clear();
+            return;
+        }
         if(Config.getRenderingEnabled()) {
+            Set<UUID> validEntities = new HashSet<>();
             for (Entity entity : client.level.entitiesForRendering()) {
+                if (!isInvalid(entity)) validEntities.add(entity.getUUID());
                 if (entity instanceof LivingEntity livingEntity && satisfiesAdvancedCriteria(client.player, livingEntity) && satisfiesList(client.player, livingEntity)) {
                     addToUUIDS(livingEntity);
                 } else removeFromUUIDS(entity.getUUID());
             }
+            trimEntities(validEntities);
+        } else {
+            UUIDS.clear();
         }
-        trimEntities(client.level);
         if(ModConfig.HANDLER.instance().after_attack != after_attack) {
             UUIDS.clear();
             after_attack = ModConfig.HANDLER.instance().after_attack;
         }
-        if(getTrackedEntity() == null || getTrackedEntity().isDeadOrDying() || getTrackedEntity().isRemoved()) setTrackedEntity(null);
+        if(trackedEntity != null && (trackedEntity.level() != client.level || trackedEntity.isDeadOrDying() || trackedEntity.isRemoved())) setTrackedEntity(null);
     }
 
     public static void onDamage(DamageSource damageSource, LivingEntity livingEntity) {
+        if (client.level == null || client.player == null || livingEntity == null
+                || livingEntity.level() != client.level || damageSource == null) return;
         if(damageSource.getEntity() instanceof Player){
-            assert client.level != null;
-            if(ModConfig.HANDLER.instance().after_attack && livingEntity instanceof LivingEntity && RenderTracker.isEntityTypeAllowed(livingEntity, client.player) && satisfiesList(client.player, livingEntity)) {
+            if(ModConfig.HANDLER.instance().after_attack && RenderTracker.isEntityTypeAllowed(livingEntity, client.player) && satisfiesList(client.player, livingEntity)) {
                 //setTrackedEntity(livingEntity);
                 if (!addToUUIDS(livingEntity)) {
                     UUIDS.replace(livingEntity.getUUID(), (ModConfig.HANDLER.instance().time_after_hit * 20));
@@ -69,19 +82,26 @@ public class RenderTracker {
 
 
     public static void trimEntities(ClientLevel world) {
-        // Check if there's a need to trim entries
+        if (world == null || world != client.level || !Config.getRenderingEnabled()) {
+            UUIDS.clear();
+            return;
+        }
+        Set<UUID> validEntities = new HashSet<>();
+        for (Entity entity : world.entitiesForRendering()) {
+            if (!isInvalid(entity)) validEntities.add(entity.getUUID());
+        }
+        trimEntities(validEntities);
+    }
+
+    private static void trimEntities(Set<UUID> validEntities) {
         Iterator<Map.Entry<UUID, Integer>> iterator = UUIDS.entrySet().iterator();
         while (iterator.hasNext()) {
             Map.Entry<UUID, Integer> entry = iterator.next();
             entry.setValue(entry.getValue() - 1);
-            if (entry.getValue() <= 0) {
+            if (entry.getValue() <= 0 || !validEntities.contains(entry.getKey())) {
                 iterator.remove(); // Safe removal during iteration
             }
         }
-
-        // Remove invalid entities
-        UUIDS.entrySet().removeIf(entry -> isInvalid(getEntityFromUUID(entry.getKey(), world))|| !Config.getRenderingEnabled() );
-        if(UUIDS.size() >= 1536) UUIDS.clear();
     }
 
 
@@ -130,29 +150,19 @@ public class RenderTracker {
     }
 
     public static boolean satisfiesList(LocalPlayer player, LivingEntity livingEntity){
-        if(!ModConfig.HANDLER.instance().blacklistOrWhitelist){
-            if(ModConfig.HANDLER.instance().list.isEmpty()) return true;
-            if(ModConfig.HANDLER.instance().list.contains("minecraft:player") && livingEntity instanceof Player) return true;
-        }
-
-        String[] blacklist1 = new String[ModConfig.HANDLER.instance().list.size()];
-        for(int i = 0; i < ModConfig.HANDLER.instance().list.size(); i++){
-            blacklist1[i] = ModConfig.HANDLER.instance().list.get(i);
-        }
-
-        if(ModConfig.HANDLER.instance().blacklistOrWhitelist) return Arrays.stream(blacklist1).noneMatch(s -> {
-            if(livingEntity instanceof Player) return Component.nullToEmpty(s).equals(Objects.requireNonNull(livingEntity.getName()));
-            else return s.equals(EntityType.getKey(livingEntity.getType()).toString());
-        });
-        else return Arrays.stream(blacklist1).anyMatch(s -> {
-            if(livingEntity instanceof Player) return Component.nullToEmpty(s).equals(Objects.requireNonNull(livingEntity.getName()));
-            else return s.equals(EntityType.getKey(livingEntity.getType()).toString());
-        });
+        if (livingEntity == null) return false;
+        return EntityFilters.matches(ModConfig.HANDLER.instance().blacklistOrWhitelist,
+                ModConfig.HANDLER.instance().list,
+                EntityType.getKey(livingEntity.getType()).toString(),
+                livingEntity instanceof Player, livingEntity.getName().getString());
     }
 
     public static boolean isTargeted(LivingEntity livingEntity){
         Entity camera = client.getCameraEntity();
+        if (camera == null || livingEntity == null || client.player == null || client.level == null
+                || livingEntity.level() != client.level) return false;
         double d = ModConfig.HANDLER.instance().reach;
+        if (d <= 0) return false;
         double e = Mth.square(d);
         Vec3 vec3d = camera.getEyePosition(0);
         HitResult hitResult = camera.pick(d, 0, false);
@@ -163,10 +173,8 @@ public class RenderTracker {
         }
         Vec3 vec3d2 = camera.getViewVector(0);
         Vec3 vec3d3 = vec3d.add(vec3d2.x * d, vec3d2.y * d, vec3d2.z * d);
-        float g = 1.0f;
         AABB box = camera.getBoundingBox().expandTowards(vec3d2.scale(d)).inflate(1.0, 1.0, 1.0);
-        assert client.getCameraEntity() != null;
-        EntityHitResult entityHitResult = ProjectileUtil.getEntityHitResult(client.getCameraEntity(), vec3d, vec3d3, box, entity -> !entity.isSpectator() && entity.isPickable(), e);
+        EntityHitResult entityHitResult = ProjectileUtil.getEntityHitResult(camera, vec3d, vec3d3, box, entity -> !entity.isSpectator() && entity.isPickable(), e);
 
         if (entityHitResult != null && entityHitResult.getEntity() instanceof LivingEntity livingEntity1){
             return livingEntity1 == livingEntity;
@@ -180,6 +188,8 @@ public class RenderTracker {
 
     public static boolean isInvalid(Entity entity){
         return (entity == null
+                || client.level == null
+                || entity.level() != client.level
                 || !entity.isAlive()
                 || !entity.showVehicleHealth()
                 || entity.touchingUnloadedChunk()
@@ -187,14 +197,6 @@ public class RenderTracker {
                 || client.player == null
                 || client.player.getVehicle() == entity
                 || entity.isInvisibleTo(client.player));
-    }
-    private static Entity getEntityFromUUID(UUID uuid, ClientLevel world) {
-        for (Entity entity : world.entitiesForRendering()) {
-            if (entity.getUUID().equals(uuid)) {
-                return entity;
-            }
-        }
-        return null;
     }
 }
 

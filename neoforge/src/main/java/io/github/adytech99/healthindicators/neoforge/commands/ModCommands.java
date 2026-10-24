@@ -1,6 +1,5 @@
 package io.github.adytech99.healthindicators.neoforge.commands;
 
-import com.mojang.authlib.minecraft.client.MinecraftClient;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.DoubleArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
@@ -68,17 +67,22 @@ public class ModCommands {
                 .then(Commands.literal("monitor")
                         .then(Commands.argument("entity_name", StringArgumentType.string())
                                 .suggests((context, builder) -> {
+                            if (Minecraft.getInstance().level == null) return builder.buildFuture();
                             for(Entity entity : Minecraft.getInstance().level.entitiesForRendering()){
+                                if (!(entity instanceof LivingEntity)) continue;
                                 if(entity.hasCustomName()) builder.suggest(Objects.requireNonNull(entity.getCustomName()).getString());
                                 if(entity instanceof Player) builder.suggest(Objects.requireNonNull(entity.getDisplayName()).getString());
                             }
                             return builder.buildFuture();
                         })
                         .executes(context -> {
-                            assert Minecraft.getInstance().level != null;
-                            if(Util.getEntityFromName(Minecraft.getInstance().level, StringArgumentType.getString(context, "entity_name")) != null) {
+                            Minecraft client = Minecraft.getInstance();
+                            if (client.level == null || client.player == null) return 0;
+                            Entity entity = Util.getEntityFromName(client.level, StringArgumentType.getString(context, "entity_name"));
+                            if(entity instanceof LivingEntity livingEntity) {
                                 ConfigUtils.sendMessage(Minecraft.getInstance().player, Component.literal("Now monitoring " + StringArgumentType.getString(context, "entity_name")));
-                                RenderTracker.setTrackedEntity((LivingEntity) Util.getEntityFromName(Minecraft.getInstance().level, StringArgumentType.getString(context, "entity_name")));
+                                RenderTracker.setTrackedEntity(livingEntity);
+                                return 1;
                             }
                             else ConfigUtils.sendMessage(Minecraft.getInstance().player, Component.literal("There is no entity named " + StringArgumentType.getString(context, "entity_name") + " in the world. It may have died or gone out of render distance."));
                             return 0;

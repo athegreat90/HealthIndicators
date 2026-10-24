@@ -7,6 +7,7 @@ import io.github.adytech99.healthindicators.enums.HeartTypeEnum;
 import io.github.adytech99.healthindicators.RenderTracker;
 import io.github.adytech99.healthindicators.util.HeartJumpData;
 import io.github.adytech99.healthindicators.util.RenderUtils;
+import io.github.adytech99.healthindicators.util.IndicatorMath;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.model.EntityModel;
@@ -84,22 +85,22 @@ public abstract class EntityRendererMixin<T extends LivingEntity, S extends Livi
     @Unique private void renderHearts(LivingEntity livingEntity, float yaw, float tickDelta, PoseStack matrixStack, SubmitNodeCollector orderedRenderCommandQueue){
         double d = this.entityRenderDispatcher.distanceToSqr(livingEntity);
         final T entAsT = (T) livingEntity; // retained for hasLabel calls
-        int healthRed = Mth.ceil(livingEntity.getHealth());
-        int maxHealth = Mth.ceil(livingEntity.getMaxHealth());
-        int healthYellow = Mth.ceil(livingEntity.getAbsorptionAmount());
+        int healthRed = IndicatorMath.healthPoints(livingEntity.getHealth());
+        int maxHealth = IndicatorMath.healthPoints(livingEntity.getMaxHealth());
+        int healthYellow = IndicatorMath.healthPoints(livingEntity.getAbsorptionAmount());
         if(ModConfig.HANDLER.instance().percentage_based_health) {
-            healthRed = Mth.ceil(((float) healthRed /maxHealth) * ModConfig.HANDLER.instance().max_health);
-            maxHealth = Mth.ceil(ModConfig.HANDLER.instance().max_health);
-            healthYellow = Mth.ceil(livingEntity.getAbsorptionAmount());
+            healthRed = IndicatorMath.scaledHealth(livingEntity.getHealth(), livingEntity.getMaxHealth(), ModConfig.HANDLER.instance().max_health);
+            maxHealth = Math.max(0, ModConfig.HANDLER.instance().max_health);
+            healthYellow = IndicatorMath.healthPoints(livingEntity.getAbsorptionAmount());
         }
-        int heartsRed = Mth.ceil(healthRed / 2.0F);
+        int heartsRed = IndicatorMath.heartCount(healthRed);
         boolean lastRedHalf = (healthRed & 1) == 1;
-        int heartsNormal = Mth.ceil(maxHealth / 2.0F);
-        int heartsYellow = Mth.ceil(healthYellow / 2.0F);
+        int heartsNormal = IndicatorMath.heartCount(maxHealth);
+        int heartsYellow = IndicatorMath.heartCount(healthYellow);
         boolean lastYellowHalf = (healthYellow & 1) == 1;
-        int heartsTotal = heartsNormal + heartsYellow;
-        int heartsPerRow = ModConfig.HANDLER.instance().icons_per_row;
-        int pixelsTotal = Math.min(heartsTotal, heartsPerRow) * 8 + 1;
+        int heartsTotal = (int) Math.min(Integer.MAX_VALUE, (long) heartsNormal + heartsYellow);
+        int heartsPerRow = IndicatorMath.iconsPerRow(ModConfig.HANDLER.instance().icons_per_row);
+        float pixelsTotal = Math.min(heartsTotal, heartsPerRow) * 8.0F + 1;
         float maxX = pixelsTotal / 2.0f;
         float scale = ModConfig.HANDLER.instance().size;
         double heartDensity = 50F - (Math.max(4F - Math.ceil((double) heartsTotal / heartsPerRow), -3F) * 5F);
@@ -153,10 +154,10 @@ public abstract class EntityRendererMixin<T extends LivingEntity, S extends Livi
                         renderLayer = RenderTypes.text(heartTextureId);
                     }
                     final HeartTypeEnum renderType = type;
-                    float opacity = ModConfig.HANDLER.instance().health_bar_opacity / 100.0F;
+                    float opacity = Math.clamp(ModConfig.HANDLER.instance().health_bar_opacity, 0, 100) / 100.0F;
                         targetQueue.submitCustomGeometry(matrixStack, renderLayer, (matricesEntry, vertexConsumer) -> {
                             Matrix4f m = matricesEntry.pose();
-                            RenderUtils.drawHeart(m, vertexConsumer, x, renderType, livingEntity, opacity, d, shouldRenderThroughWalls);
+                            RenderUtils.drawHeart(m, vertexConsumer, x, renderType, opacity, d, shouldRenderThroughWalls);
                         });
                 } else {
                     HeartTypeEnum type;
@@ -189,10 +190,10 @@ public abstract class EntityRendererMixin<T extends LivingEntity, S extends Livi
                             renderLayer = RenderTypes.text(heartTextureId);
                         }
                         final HeartTypeEnum renderType = type;
-                        float opacity = ModConfig.HANDLER.instance().health_bar_opacity / 100.0F;
+                        float opacity = Math.clamp(ModConfig.HANDLER.instance().health_bar_opacity, 0, 100) / 100.0F;
                         targetQueue.submitCustomGeometry(matrixStack, renderLayer, (matricesEntry, vertexConsumer) -> {
                             Matrix4f m = matricesEntry.pose();
-                            RenderUtils.drawHeart(m, vertexConsumer, x, renderType, livingEntity, opacity, d, shouldRenderThroughWalls);
+                            RenderUtils.drawHeart(m, vertexConsumer, x, renderType, opacity, d, shouldRenderThroughWalls);
                         });
                     }
                 }
@@ -229,7 +230,7 @@ public abstract class EntityRendererMixin<T extends LivingEntity, S extends Livi
         ModConfig.HANDLER.instance().number_display_background_color.getRGB() : 0;
 
     int textColor = ModConfig.HANDLER.instance().number_color.getRGB();
-    int opacity = ModConfig.HANDLER.instance().health_bar_opacity;
+    int opacity = Math.clamp(ModConfig.HANDLER.instance().health_bar_opacity, 0, 100);
     textColor = (textColor & 0x00FFFFFF) | ((opacity * 255 / 100) << 24);
 
     orderedRenderCommandQueue.submitText(
@@ -256,8 +257,8 @@ public abstract class EntityRendererMixin<T extends LivingEntity, S extends Livi
         int armorPoints = Mth.ceil(armor / 2.0F);
         boolean lastPointHalf = (armor & 1) == 1;
     int pointsTotal = 10;
-        int pointsPerRow = ModConfig.HANDLER.instance().icons_per_row;
-        int pixelsTotal = Math.min(pointsTotal, pointsPerRow) * 8 + 1;
+        int pointsPerRow = IndicatorMath.iconsPerRow(ModConfig.HANDLER.instance().icons_per_row);
+        float pixelsTotal = Math.min(pointsTotal, pointsPerRow) * 8.0F + 1;
         float maxX = pixelsTotal / 2.0f;
         float scale = ModConfig.HANDLER.instance().size;
         // Check if entity is obstructed by blocks
@@ -303,7 +304,7 @@ public abstract class EntityRendererMixin<T extends LivingEntity, S extends Livi
                         renderLayer = RenderTypes.text(armorTextureId);
                     }
                     final ArmorTypeEnum renderType = type;
-                    float opacity = ModConfig.HANDLER.instance().health_bar_opacity / 100.0F;
+                    float opacity = Math.clamp(ModConfig.HANDLER.instance().health_bar_opacity, 0, 100) / 100.0F;
                     targetQueue.submitCustomGeometry(matrixStack, renderLayer, (matricesEntry, vertexConsumer) -> {
                         Matrix4f m = matricesEntry.pose();
                         RenderUtils.drawArmor(m, vertexConsumer, x, renderType, opacity, d, shouldRenderThroughWalls);

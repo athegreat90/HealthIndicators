@@ -1,69 +1,63 @@
 package io.github.adytech99.healthindicators.config;
 
-import com.google.gson.Gson;
 import dev.architectury.platform.Platform;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.FileReader;
-import java.io.FileWriter;
+import java.io.IOException;
 
 public class Config {
-    private static final Gson GSON = new Gson();
     public static final String CONFIG_FILE = "healthindicators.json";
-    private static Config INSTANCE = new Config();
-
-    private boolean heartsRenderingEnabled = true;
-    private boolean armorRenderingEnabled = false;
-    private boolean overrideAllFiltersEnabled = false;
+    private static final Logger LOGGER = LoggerFactory.getLogger(Config.class);
+    private static final ToggleConfigStore STORE = new ToggleConfigStore(Platform.getConfigFolder().resolve(CONFIG_FILE));
 
     public static boolean getRenderingEnabled(){
-        return INSTANCE.heartsRenderingEnabled || INSTANCE.armorRenderingEnabled;
+        return STORE.getHeartsRenderingEnabled() || STORE.getArmorRenderingEnabled();
     }
 
     public static boolean getHeartsRenderingEnabled() {
-        return INSTANCE.heartsRenderingEnabled;
+        return STORE.getHeartsRenderingEnabled();
     }
 
     public static void setHeartsRenderingEnabled(boolean renderingEnabled) {
-        INSTANCE.heartsRenderingEnabled = renderingEnabled;
-        save();
+        if (STORE.getHeartsRenderingEnabled() != renderingEnabled) {
+            STORE.setHeartsRenderingEnabled(renderingEnabled);
+            save();
+        }
     }
 
     public static boolean getArmorRenderingEnabled() {
-        return INSTANCE.armorRenderingEnabled;
+        return STORE.getArmorRenderingEnabled();
     }
     public static void setArmorRenderingEnabled(boolean armorRenderingEnabled) {
-        INSTANCE.armorRenderingEnabled = armorRenderingEnabled;
-        save();
+        if (STORE.getArmorRenderingEnabled() != armorRenderingEnabled) {
+            STORE.setArmorRenderingEnabled(armorRenderingEnabled);
+            save();
+        }
     }
 
     public static boolean getOverrideAllFiltersEnabled() {
-        return INSTANCE.overrideAllFiltersEnabled;
+        return STORE.getOverrideAllFiltersEnabled();
     }
 
     public static void setOverrideAllFiltersEnabled(boolean overrideAllFiltersEnabled) {
-        INSTANCE.overrideAllFiltersEnabled = overrideAllFiltersEnabled;
-        save();
+        STORE.setOverrideAllFiltersEnabled(overrideAllFiltersEnabled);
     }
 
 
     public static void load() {
-        try (BufferedReader reader = new BufferedReader(new FileReader(Platform.getConfigFolder().resolve(CONFIG_FILE).toFile()))) {
-            Config config = GSON.fromJson(reader, Config.class);
-            if (config != null) {
-                INSTANCE = config;
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
+        try {
+            STORE.load();
+        } catch (IOException e) {
+            LOGGER.error("Could not load {}; the existing file has been preserved", CONFIG_FILE, e);
         }
     }
 
     public static void save() {
-        try (BufferedWriter writer = new BufferedWriter(new FileWriter(Platform.getConfigFolder().resolve(CONFIG_FILE).toFile()))) {
-            GSON.toJson(INSTANCE, writer);
-        } catch (Exception e) {
-            e.printStackTrace();
+        try {
+            STORE.save();
+        } catch (IOException e) {
+            LOGGER.error("Could not save {}; the existing file has been preserved", CONFIG_FILE, e);
         }
     }
 }
